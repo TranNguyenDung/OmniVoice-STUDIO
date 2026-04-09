@@ -1,0 +1,17 @@
+[
+    {
+        "text": "Chào mừng bạn đến với khóa học lập trình nhúng chuyên sâu. Hôm nay chúng ta sẽ tìm hiểu về vi điều khiển.",
+        "ref_audio": "input/web_20260409_110930.wav",
+        "output_path": "output/bai_1_gioi_thieu.wav"
+    },
+    {
+        "text": "Hệ thống nhúng là sự kết hợp giữa phần cứng và phần mềm được thiết kế cho các nhiệm vụ cụ thể trong một hệ thống lớn hơn.",
+        "ref_audio": "input/web_20260409_110930.wav",
+        "output_path": "output/bai_2_he_thong_nhung.wav"
+    },
+    {
+        "text": "Internet vạn vật hay IoT đang mở ra một kỷ nguyên mới của sự kết nối giữa thế giới thực và thế giới số.",
+        "ref_audio": "input/web_20260409_110930.wav",
+        "output_path": "output/bai_3_iot.wav"
+    }
+]
