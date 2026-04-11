@@ -1,0 +1,40 @@
+{
+    "news_list": [
+        {
+            "id": "hugging_001",
+            "text": "Google vừa gây bất ngờ lớn khi ra mắt Gemma 4 phiên bản 31B. Đây là mô hình đa phương thức mạnh mẽ, có khả năng xử lý đồng thời cả hình ảnh và văn bản để đưa ra những phản hồi cực kỳ chính xác. Sự ra đời của Gemma 4 đánh dấu một bước tiến mới của Google trong việc đưa AI đến gần hơn với người dùng phổ thông thông qua các mô hình nhỏ gọn nhưng hiệu quả.",
+            "output_name": "hg_gemma4.mp4",
+            "background_color": [44, 62, 80],
+            "instruct": "female, young adult, low pitch",
+            "keywords": [
+                ["GOOGLE GEMMA 4", 0, 5],
+                ["MÔ HÌNH 31B", 6, 10],
+                ["ĐA PHƯƠNG THỨC", 11, 15]
+            ]
+        },
+        {
+            "id": "hugging_002",
+            "text": "Cộng đồng AI đang xôn xao với phiên bản Gemma-4-31B được tinh chỉnh đặc biệt mang mã hiệu JANG-4M-CRACK. Mô hình này được tối ưu hóa cho các tác vụ tạo văn bản hiệu suất cao, mang lại tốc độ xử lý vượt trội so với các phiên bản tiêu chuẩn. Đây là minh chứng cho sức mạnh của việc tinh chỉnh mô hình mã nguồn mở trong cộng đồng công nghệ.",
+            "output_name": "hg_gemma_fine_tuned.mp4",
+            "background_color": [38, 70, 83],
+            "instruct": "female, young adult, low pitch",
+            "keywords": [
+                ["FINE-TUNED AI", 0, 5],
+                ["HIỆU SUẤT CAO", 6, 10],
+                ["TỐC ĐỘ VƯỢT TRỘI", 11, 15]
+            ]
+        },
+        {
+            "id": "hugging_003",
+            "text": "Zai-org vừa giới thiệu GLM 5.1, một siêu mô hình ngôn ngữ với quy mô khổng lồ lên tới 754 tỷ tham số. GLM 5.1 được thiết kế để xử lý các tác vụ hiểu ngôn ngữ tự nhiên ở cấp độ phức tạp nhất. Với quy mô này, GLM 5.1 hứa hẹn sẽ mở ra những khả năng mới trong việc phân tích dữ liệu và tương tác người máy một cách tự nhiên như người thật.",
+            "output_name": "hg_glm51.mp4",
+            "background_color": [20, 40, 60],
+            "instruct": "female, young adult, low pitch",
+            "keywords": [
+                ["GLM 5.1", 0, 5],
+                ["754 TỶ THAM SỐ", 6, 11],
+                ["SIÊU MÔ HÌNH AI", 12, 16]
+            ]
+        }
+    ]
+}
