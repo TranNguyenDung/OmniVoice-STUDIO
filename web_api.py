@@ -19,6 +19,7 @@ from moviepy import (
 )
 import numpy as np
 from scipy.ndimage import gaussian_filter
+from PIL import Image
 
 from moviepy.Effect import Effect
 
@@ -36,6 +37,63 @@ class Blur(Effect):
             frame = get_frame(t)
             sigma = [self.radius / 2, self.radius / 2, 0]
             return gaussian_filter(frame, sigma=sigma)
+
+        return clip.transform(filter_frame)
+
+
+# Ken Burns / Zoom / Pan Effect for MoviePy 2.x
+class KenBurnsEffect(Effect):
+    def __init__(self, zoom_start=1.0, zoom_end=1.2, pan_start=(0, 0), pan_end=(0, 0)):
+        self.zoom_start = zoom_start
+        self.zoom_end = zoom_end
+        self.pan_start = pan_start  # (x, y) as fractions of frame size
+        self.pan_end = pan_end
+
+    def copy(self):
+        return KenBurnsEffect(
+            zoom_start=self.zoom_start,
+            zoom_end=self.zoom_end,
+            pan_start=self.pan_start,
+            pan_end=self.pan_end,
+        )
+
+    def apply(self, clip):
+        def filter_frame(get_frame, t):
+            progress = t / clip.duration
+            zoom = self.zoom_start + (self.zoom_end - self.zoom_start) * progress
+            pan_x = self.pan_start[0] + (self.pan_end[0] - self.pan_start[0]) * progress
+            pan_y = self.pan_start[1] + (self.pan_end[1] - self.pan_start[1]) * progress
+
+            frame = get_frame(t)
+            h, w = frame.shape[:2]
+
+            scaled_w = int(w * zoom)
+            scaled_h = int(h * zoom)
+
+            # Convert RGBA to RGB if needed (PIL requires RGB for LANCZOS)
+            if frame.shape[2] == 4:
+                pil_frame = Image.fromarray(frame).convert("RGB")
+            else:
+                pil_frame = Image.fromarray(frame)
+
+            scaled = pil_frame.resize((scaled_w, scaled_h), Image.LANCZOS)
+
+            # Calculate offset to keep center aligned
+            # Center offset: (scaled_w - w) / 2
+            # Pan adjusts from center: -pan_x * extra_space (negative pan_x = move right, positive = move left)
+            extra_w = scaled_w - w
+            extra_h = scaled_h - h
+
+            offset_x = (extra_w / 2) - (pan_x * extra_w)
+            offset_y = (extra_h / 2) - (pan_y * extra_h)
+
+            offset_x = max(0, min(offset_x, max(0, extra_w)))
+            offset_y = max(0, min(offset_y, max(0, extra_h)))
+
+            cropped = scaled.crop(
+                (int(offset_x), int(offset_y), int(offset_x + w), int(offset_y + h))
+            )
+            return np.array(cropped)
 
         return clip.transform(filter_frame)
 
@@ -174,14 +232,24 @@ async def upload_media(file: UploadFile = File(...)):
 
 class VideoRequest(BaseModel):
     audio_url: str
-    media_files: List[dict]  # [{"filename": "...", "type": "image|video"}]
+    media_files: List[
+        dict
+    ]  # [{"filename": "...", "type": "image|video", "duration": 5.0, "motion": "none|zoom|pan|kenburns", "motion_params": {...}}]
     aspect_ratio: Optional[str] = "16:9"
     blur_radius: Optional[int] = 20
     bg_opacity: Optional[float] = 0.7
-    image_duration: Optional[float] = 5.0  # Thời gian hiển thị cho ảnh (giây)
+    image_duration: Optional[float] = 5.0  # Default thời gian hiển thị cho ảnh (giây)
 
 
-def assemble_clip_layers(clip, target_w, target_h, blur_radius=20, bg_opacity=0.7):
+def assemble_clip_layers(
+    clip,
+    target_w,
+    target_h,
+    blur_radius=20,
+    bg_opacity=0.7,
+    motion=None,
+    motion_params=None,
+):
     """
     Nguyên lý lắp ghép (Assembly Principle):
     1. Lớp nền (Background Layer):
@@ -190,11 +258,158 @@ def assemble_clip_layers(clip, target_w, target_h, blur_radius=20, bg_opacity=0.
        - Áp dụng Blur theo thông số blur_radius.
        - Áp dụng MultiplyColor theo bg_opacity để làm tối/sáng nền.
     2. Lớp trên (Foreground Layer):
+       - Áp dụng motion effect (zoom, pan, kenburns) nếu có (TRƯỚC KHI resize).
        - Scale clip để vừa khít (contain) trong khung hình, giữ nguyên tỷ lệ.
        - Đặt ở giữa (center).
     3. Kết hợp (Composition):
        - Chồng lớp trên lên lớp nền bằng CompositeVideoClip.
     """
+    # Áp dụng motion effect TRƯỚC KHI resize (trên ảnh gốc)
+    if motion and motion != "none" and motion_params is not None:
+        import random
+
+        print(f"    [motion] Applying {motion} effect")
+
+        if motion == "auto":
+            # Auto: random chọn 1 trong 3 loại: zoom, pan, hoặc kenburns
+            motion_type = random.choice(["zoom", "pan", "kenburns"])
+
+            if motion_type == "zoom":
+                # Pure zoom (center, no pan)
+                zoom_start = 1.0
+                zoom_end = random.uniform(1.2, 1.5)
+                clip = clip.with_effects(
+                    [
+                        KenBurnsEffect(
+                            zoom_start=zoom_start,
+                            zoom_end=zoom_end,
+                            pan_start=(0, 0),
+                            pan_end=(0, 0),
+                        )
+                    ]
+                )
+                print(f"    [motion] Auto (zoom): {zoom_start:.2f} -> {zoom_end:.2f}")
+
+            elif motion_type == "pan":
+                # Pure pan (no zoom)
+                direction = random.choice(["left", "right", "up", "down"])
+                pan_amount = random.uniform(0.1, 0.2)
+
+                if direction == "left":
+                    pan_start = (pan_amount, 0)
+                    pan_end = (-pan_amount, 0)
+                elif direction == "right":
+                    pan_start = (-pan_amount, 0)
+                    pan_end = (pan_amount, 0)
+                elif direction == "up":
+                    pan_start = (0, pan_amount)
+                    pan_end = (0, -pan_amount)
+                else:  # down
+                    pan_start = (0, -pan_amount)
+                    pan_end = (0, pan_amount)
+
+                clip = clip.with_effects(
+                    [
+                        KenBurnsEffect(
+                            zoom_start=1.0,
+                            zoom_end=1.0,
+                            pan_start=pan_start,
+                            pan_end=pan_end,
+                        )
+                    ]
+                )
+                print(f"    [motion] Auto (pan): {direction} {pan_amount:.2f}")
+
+            else:  # kenburns
+                # Ken Burns: zoom + pan
+                zoom_start = 1.0
+                zoom_end = random.uniform(1.2, 1.4)
+                direction = random.choice(["left", "right", "up", "down", "center"])
+                pan_amount = random.uniform(0.08, 0.15)
+
+                if direction == "center":
+                    pan_start = (0, 0)
+                    pan_end = (0, 0)
+                elif direction == "left":
+                    pan_start = (pan_amount, pan_amount)
+                    pan_end = (-pan_amount, -pan_amount)
+                elif direction == "right":
+                    pan_start = (-pan_amount, -pan_amount)
+                    pan_end = (pan_amount, pan_amount)
+                elif direction == "up":
+                    pan_start = (pan_amount, pan_amount)
+                    pan_end = (-pan_amount, -pan_amount)
+                else:  # down
+                    pan_start = (-pan_amount, -pan_amount)
+                    pan_end = (pan_amount, pan_amount)
+
+                clip = clip.with_effects(
+                    [
+                        KenBurnsEffect(
+                            zoom_start=zoom_start,
+                            zoom_end=zoom_end,
+                            pan_start=pan_start,
+                            pan_end=pan_end,
+                        )
+                    ]
+                )
+                print(
+                    f"    [motion] Auto (kenburns): zoom {zoom_start:.2f}->{zoom_end:.2f}, {direction}"
+                )
+
+        elif motion == "zoom":
+            zoom_start = motion_params.get("zoom_start", 1.0)
+            zoom_end = motion_params.get("zoom_end", 1.4)
+            clip = clip.with_effects(
+                [
+                    KenBurnsEffect(
+                        zoom_start=zoom_start,
+                        zoom_end=zoom_end,
+                        pan_start=(0, 0),
+                        pan_end=(0, 0),
+                    )
+                ]
+            )
+            print(f"    [motion] Zoom: {zoom_start} -> {zoom_end}")
+
+        elif motion == "pan":
+            pan_x_start = motion_params.get("pan_x_start", -0.15)
+            pan_x_end = motion_params.get("pan_x_end", 0.15)
+            pan_y_start = motion_params.get("pan_y_start", -0.1)
+            pan_y_end = motion_params.get("pan_y_end", 0.1)
+            clip = clip.with_effects(
+                [
+                    KenBurnsEffect(
+                        zoom_start=1.0,
+                        zoom_end=1.0,
+                        pan_start=(pan_x_start, pan_y_start),
+                        pan_end=(pan_x_end, pan_y_end),
+                    )
+                ]
+            )
+            print(
+                f"    [motion] Pan: ({pan_x_start},{pan_y_start}) -> ({pan_x_end},{pan_y_end})"
+            )
+
+        elif motion == "kenburns":
+            zoom_start = motion_params.get("zoom_start", 1.0)
+            zoom_end = motion_params.get("zoom_end", 1.5)
+            pan_x_start = motion_params.get("pan_x_start", -0.15)
+            pan_x_end = motion_params.get("pan_x_end", 0.15)
+            pan_y_start = motion_params.get("pan_y_start", -0.1)
+            pan_y_end = motion_params.get("pan_y_end", 0.1)
+            clip = clip.with_effects(
+                [
+                    KenBurnsEffect(
+                        zoom_start=zoom_start,
+                        zoom_end=zoom_end,
+                        pan_start=(pan_x_start, pan_y_start),
+                        pan_end=(pan_x_end, pan_y_end),
+                    )
+                ]
+            )
+            print(f"    [motion] KenBurns: zoom {zoom_start}->{zoom_end}")
+
     # 1. Tạo lớp nền
     scale_w = target_w / clip.w
     scale_h = target_h / clip.h
@@ -214,7 +429,7 @@ def assemble_clip_layers(clip, target_w, target_h, blur_radius=20, bg_opacity=0.
 
     bg_clip = bg_clip.with_effects(effects)
 
-    # 2. Tạo lớp trên
+    # 2. Tạo lớp trên (sau khi motion đã được áp dụng)
     contain_scale = min(scale_w, scale_h)
     fg_clip = clip.resized(contain_scale).with_position("center")
 
@@ -303,10 +518,17 @@ async def generate_video(req: VideoRequest):
                 f"\n--- Processing clip {i + 1}/{len(valid_media)}: {m['filename']} ---"
             )
 
-            # 5a. Load clip gốc từ file
+            # Lấy settings cho từng media
+            m_duration = m.get("duration", img_duration)
+            m_motion = m.get("motion", "none")
+            m_motion_params = m.get("motion_params", {})
+
             print(f"[5a] Loading: {m['filename']}")
+            print(f"[5a] Media settings: duration={m_duration}s, motion={m_motion}")
+
+            # 5a. Load clip gốc từ file
             if m["type"] == "image":
-                clip = ImageClip(str(m_path)).with_duration(img_duration).with_fps(24)
+                clip = ImageClip(str(m_path)).with_duration(m_duration).with_fps(24)
                 print(
                     f"[5a] ImageClip created: {clip.w}x{clip.h}, fps={clip.fps}, duration={clip.duration}s"
                 )
@@ -321,7 +543,7 @@ async def generate_video(req: VideoRequest):
 
             # 5c. Áp dụng Assembly Layers (Background blur + Foreground contain)
             print(
-                f"[5c] Applying assemble_clip_layers (blur={req.blur_radius}, opacity={req.bg_opacity})"
+                f"[5c] Applying assemble_clip_layers (blur={req.blur_radius}, opacity={req.bg_opacity}, motion={m_motion})"
             )
             assembled_clip = assemble_clip_layers(
                 clip,
@@ -329,6 +551,8 @@ async def generate_video(req: VideoRequest):
                 target_h,
                 blur_radius=req.blur_radius,
                 bg_opacity=req.bg_opacity,
+                motion=m_motion if m["type"] == "image" else None,
+                motion_params=m_motion_params if m["type"] == "image" else None,
             )
             print(
                 f"[5c] Assembled: {assembled_clip.w}x{assembled_clip.h}, duration={assembled_clip.duration:.2f}s"

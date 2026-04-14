@@ -21,6 +21,7 @@ yarn-error.log*
 # Output audio files
 output/
 *.wav
+*.mp4
 
 # IDE
 .idea/
@@ -30,3 +31,19 @@ output/
 
 # Cache
 .ruff_cache/
+
+# Temp/Debug
+temp_debug/
+temp-audio-*.m4a
+
+# Test/Input files
+input/temp_*.json
+input/web_20*.json
+
+# Output
+output_videos/
+media_uploads/
+
+# Test config
+test_config.json
+TODO.md
