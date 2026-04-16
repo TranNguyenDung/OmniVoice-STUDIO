@@ -253,189 +253,93 @@ def assemble_clip_layers(
     """
     Nguyên lý lắp ghép (Assembly Principle):
     1. Lớp nền (Background Layer):
+       - Lấy từ ảnh tĩnh (không áp dụng motion của fg).
        - Scale clip để phủ kín (cover) toàn bộ khung hình.
-       - Crop phần trung tâm để khớp chính xác target_w x target_h.
-       - Áp dụng Blur theo thông số blur_radius.
-       - Áp dụng MultiplyColor theo bg_opacity để làm tối/sáng nền.
+       - Áp dụng Blur và làm tối.
     2. Lớp trên (Foreground Layer):
-       - Áp dụng motion effect (zoom, pan, kenburns) nếu có (TRƯỚC KHI resize).
-       - Scale clip để vừa khít (contain) trong khung hình, giữ nguyên tỷ lệ.
-       - Đặt ở giữa (center).
+       - Áp dụng motion effect (zoom, pan, kenburns).
+       - Đảm bảo 'pan' luôn có zoom > 1.0 để có không gian trượt.
+       - Scale clip để vừa khít (contain) trong khung hình.
     3. Kết hợp (Composition):
-       - Chồng lớp trên lên lớp nền bằng CompositeVideoClip.
+       - Chồng lớp trên lên lớp nền.
     """
-    # Áp dụng motion effect TRƯỚC KHI resize (trên ảnh gốc)
-    if motion and motion != "none" and motion_params is not None:
-        import random
+    # Tạo bản sao tĩnh cho nền
+    static_clip = clip
 
+    # --- XỬ LÝ MOTION CHO LỚP TRÊN (FG) ---
+    fg_clip = clip
+    if motion and motion != "none":
+        import random
         print(f"    [motion] Applying {motion} effect")
 
         if motion == "auto":
-            # Auto: random chọn 1 trong 3 loại: zoom, pan, hoặc kenburns
             motion_type = random.choice(["zoom", "pan", "kenburns"])
-
             if motion_type == "zoom":
-                # Pure zoom (center, no pan)
-                zoom_start = 1.0
-                zoom_end = random.uniform(1.2, 1.5)
-                clip = clip.with_effects(
-                    [
-                        KenBurnsEffect(
-                            zoom_start=zoom_start,
-                            zoom_end=zoom_end,
-                            pan_start=(0, 0),
-                            pan_end=(0, 0),
-                        )
-                    ]
-                )
-                print(f"    [motion] Auto (zoom): {zoom_start:.2f} -> {zoom_end:.2f}")
-
+                z_start, z_end = 1.0, random.uniform(1.2, 1.4)
+                fg_clip = fg_clip.with_effects([KenBurnsEffect(zoom_start=z_start, zoom_end=z_end)])
             elif motion_type == "pan":
-                # Pure pan (no zoom)
+                # Pan BUỘC phải có zoom để có chỗ trượt
+                z = random.uniform(1.25, 1.4)
                 direction = random.choice(["left", "right", "up", "down"])
-                pan_amount = random.uniform(0.1, 0.2)
-
-                if direction == "left":
-                    pan_start = (pan_amount, 0)
-                    pan_end = (-pan_amount, 0)
-                elif direction == "right":
-                    pan_start = (-pan_amount, 0)
-                    pan_end = (pan_amount, 0)
-                elif direction == "up":
-                    pan_start = (0, pan_amount)
-                    pan_end = (0, -pan_amount)
-                else:  # down
-                    pan_start = (0, -pan_amount)
-                    pan_end = (0, pan_amount)
-
-                clip = clip.with_effects(
-                    [
-                        KenBurnsEffect(
-                            zoom_start=1.0,
-                            zoom_end=1.0,
-                            pan_start=pan_start,
-                            pan_end=pan_end,
-                        )
-                    ]
-                )
-                print(f"    [motion] Auto (pan): {direction} {pan_amount:.2f}")
-
-            else:  # kenburns
-                # Ken Burns: zoom + pan
-                zoom_start = 1.0
-                zoom_end = random.uniform(1.2, 1.4)
-                direction = random.choice(["left", "right", "up", "down", "center"])
-                pan_amount = random.uniform(0.08, 0.15)
-
-                if direction == "center":
-                    pan_start = (0, 0)
-                    pan_end = (0, 0)
-                elif direction == "left":
-                    pan_start = (pan_amount, pan_amount)
-                    pan_end = (-pan_amount, -pan_amount)
-                elif direction == "right":
-                    pan_start = (-pan_amount, -pan_amount)
-                    pan_end = (pan_amount, pan_amount)
-                elif direction == "up":
-                    pan_start = (pan_amount, pan_amount)
-                    pan_end = (-pan_amount, -pan_amount)
-                else:  # down
-                    pan_start = (-pan_amount, -pan_amount)
-                    pan_end = (pan_amount, pan_amount)
-
-                clip = clip.with_effects(
-                    [
-                        KenBurnsEffect(
-                            zoom_start=zoom_start,
-                            zoom_end=zoom_end,
-                            pan_start=pan_start,
-                            pan_end=pan_end,
-                        )
-                    ]
-                )
-                print(
-                    f"    [motion] Auto (kenburns): zoom {zoom_start:.2f}->{zoom_end:.2f}, {direction}"
-                )
+                amt = 0.15
+                p_start, p_end = (amt, 0), (-amt, 0)
+                if direction == "right": p_start, p_end = (-amt, 0), (amt, 0)
+                elif direction == "up": p_start, p_end = (0, amt), (0, -amt)
+                elif direction == "down": p_start, p_end = (0, -amt), (0, amt)
+                fg_clip = fg_clip.with_effects([KenBurnsEffect(zoom_start=z, zoom_end=z, pan_start=p_start, pan_end=p_end)])
+            else: # kenburns
+                z_start, z_end = 1.0, random.uniform(1.3, 1.5)
+                amt = 0.1
+                p_start = (random.uniform(-amt, amt), random.uniform(-amt, amt))
+                p_end = (random.uniform(-amt, amt), random.uniform(-amt, amt))
+                fg_clip = fg_clip.with_effects([KenBurnsEffect(zoom_start=z_start, zoom_end=z_end, pan_start=p_start, pan_end=p_end)])
 
         elif motion == "zoom":
-            zoom_start = motion_params.get("zoom_start", 1.0)
-            zoom_end = motion_params.get("zoom_end", 1.4)
-            clip = clip.with_effects(
-                [
-                    KenBurnsEffect(
-                        zoom_start=zoom_start,
-                        zoom_end=zoom_end,
-                        pan_start=(0, 0),
-                        pan_end=(0, 0),
-                    )
-                ]
-            )
-            print(f"    [motion] Zoom: {zoom_start} -> {zoom_end}")
+            z_start = motion_params.get("zoom_start", 1.0)
+            z_end = motion_params.get("zoom_end", 1.4)
+            fg_clip = fg_clip.with_effects([KenBurnsEffect(zoom_start=z_start, zoom_end=z_end)])
 
         elif motion == "pan":
-            pan_x_start = motion_params.get("pan_x_start", -0.15)
-            pan_x_end = motion_params.get("pan_x_end", 0.15)
-            pan_y_start = motion_params.get("pan_y_start", -0.1)
-            pan_y_end = motion_params.get("pan_y_end", 0.1)
-            clip = clip.with_effects(
-                [
-                    KenBurnsEffect(
-                        zoom_start=1.0,
-                        zoom_end=1.0,
-                        pan_start=(pan_x_start, pan_y_start),
-                        pan_end=(pan_x_end, pan_y_end),
-                    )
-                ]
-            )
-            print(
-                f"    [motion] Pan: ({pan_x_start},{pan_y_start}) -> ({pan_x_end},{pan_y_end})"
-            )
+            z = motion_params.get("zoom", 1.3) # Ép zoom tối thiểu 1.3 nếu là pan
+            px_s, px_e = motion_params.get("pan_x_start", 0.1), motion_params.get("pan_x_end", -0.1)
+            py_s, py_e = motion_params.get("pan_y_start", 0), motion_params.get("pan_y_end", 0)
+            fg_clip = fg_clip.with_effects([KenBurnsEffect(zoom_start=z, zoom_end=z, pan_start=(px_s, py_s), pan_end=(px_e, py_e))])
 
         elif motion == "kenburns":
-            zoom_start = motion_params.get("zoom_start", 1.0)
-            zoom_end = motion_params.get("zoom_end", 1.5)
-            pan_x_start = motion_params.get("pan_x_start", -0.15)
-            pan_x_end = motion_params.get("pan_x_end", 0.15)
-            pan_y_start = motion_params.get("pan_y_start", -0.1)
-            pan_y_end = motion_params.get("pan_y_end", 0.1)
-            clip = clip.with_effects(
-                [
-                    KenBurnsEffect(
-                        zoom_start=zoom_start,
-                        zoom_end=zoom_end,
-                        pan_start=(pan_x_start, pan_y_start),
-                        pan_end=(pan_x_end, pan_y_end),
-                    )
-                ]
-            )
-            print(f"    [motion] KenBurns: zoom {zoom_start}->{zoom_end}")
+            z_s, z_e = motion_params.get("zoom_start", 1.0), motion_params.get("zoom_end", 1.5)
+            px_s, px_e = motion_params.get("pan_x_start", -0.1), motion_params.get("pan_x_end", 0.1)
+            py_s, py_e = motion_params.get("pan_y_start", -0.05), motion_params.get("pan_y_end", 0.05)
+            fg_clip = fg_clip.with_effects([KenBurnsEffect(zoom_start=z_s, zoom_end=z_e, pan_start=(px_s, py_s), pan_end=(px_e, py_e))])
 
-    # 1. Tạo lớp nền
-    scale_w = target_w / clip.w
-    scale_h = target_h / clip.h
-    cover_scale = max(scale_w, scale_h)
+    # 1. Tạo lớp nền (Background Layer) - Dùng static_clip
+    scale_w_bg = target_w / static_clip.w
+    scale_h_bg = target_h / static_clip.h
+    cover_scale = max(scale_w_bg, scale_h_bg)
 
-    bg_clip = clip.resized(cover_scale).cropped(
-        x_center=clip.w * cover_scale / 2,
-        y_center=clip.h * cover_scale / 2,
+    bg_clip = static_clip.resized(cover_scale).cropped(
+        x_center=static_clip.w * cover_scale / 2,
+        y_center=static_clip.h * cover_scale / 2,
         width=target_w,
         height=target_h,
     )
 
-    # Áp dụng Blur và Opacity (Brightness)
-    effects = [MultiplyColor(bg_opacity)]
+    bg_effects = [MultiplyColor(bg_opacity)]
     if blur_radius > 0:
-        effects.insert(0, Blur(radius=blur_radius))
+        bg_effects.insert(0, Blur(radius=blur_radius))
+    bg_clip = bg_clip.with_effects(bg_effects)
 
-    bg_clip = bg_clip.with_effects(effects)
+    # 2. Tạo lớp trên (Foreground Layer) - Dùng fg_clip (đã có motion)
+    scale_w_fg = target_w / fg_clip.w
+    scale_h_fg = target_h / fg_clip.h
+    contain_scale = min(scale_w_fg, scale_h_fg)
+    
+    # resized() trên một clip đã có effect sẽ áp dụng lên từng frame của effect đó
+    fg_clip = fg_clip.resized(contain_scale).with_position("center")
 
-    # 2. Tạo lớp trên (sau khi motion đã được áp dụng)
-    contain_scale = min(scale_w, scale_h)
-    fg_clip = clip.resized(contain_scale).with_position("center")
-
-    # 3. Chồng lớp
+    # 3. Kết hợp
     combined = CompositeVideoClip([bg_clip, fg_clip], size=(target_w, target_h))
     return combined.with_duration(clip.duration)
+
 
 
 @app.post("/generate_video")
