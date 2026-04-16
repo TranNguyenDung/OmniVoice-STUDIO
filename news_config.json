@@ -1,40 +1,67 @@
 {
-    "news_list": [
-        {
-            "id": "hugging_001",
-            "text": "Google vừa gây bất ngờ lớn khi ra mắt Gemma 4 phiên bản 31B. Đây là mô hình đa phương thức mạnh mẽ, có khả năng xử lý đồng thời cả hình ảnh và văn bản để đưa ra những phản hồi cực kỳ chính xác. Sự ra đời của Gemma 4 đánh dấu một bước tiến mới của Google trong việc đưa AI đến gần hơn với người dùng phổ thông thông qua các mô hình nhỏ gọn nhưng hiệu quả.",
-            "output_name": "hg_gemma4.mp4",
-            "background_color": [44, 62, 80],
-            "instruct": "female, young adult, low pitch",
-            "keywords": [
-                ["GOOGLE GEMMA 4", 0, 5],
-                ["MÔ HÌNH 31B", 6, 10],
-                ["ĐA PHƯƠNG THỨC", 11, 15]
-            ]
-        },
-        {
-            "id": "hugging_002",
-            "text": "Cộng đồng AI đang xôn xao với phiên bản Gemma-4-31B được tinh chỉnh đặc biệt mang mã hiệu JANG-4M-CRACK. Mô hình này được tối ưu hóa cho các tác vụ tạo văn bản hiệu suất cao, mang lại tốc độ xử lý vượt trội so với các phiên bản tiêu chuẩn. Đây là minh chứng cho sức mạnh của việc tinh chỉnh mô hình mã nguồn mở trong cộng đồng công nghệ.",
-            "output_name": "hg_gemma_fine_tuned.mp4",
-            "background_color": [38, 70, 83],
-            "instruct": "female, young adult, low pitch",
-            "keywords": [
-                ["FINE-TUNED AI", 0, 5],
-                ["HIỆU SUẤT CAO", 6, 10],
-                ["TỐC ĐỘ VƯỢT TRỘI", 11, 15]
-            ]
-        },
-        {
-            "id": "hugging_003",
-            "text": "Zai-org vừa giới thiệu GLM 5.1, một siêu mô hình ngôn ngữ với quy mô khổng lồ lên tới 754 tỷ tham số. GLM 5.1 được thiết kế để xử lý các tác vụ hiểu ngôn ngữ tự nhiên ở cấp độ phức tạp nhất. Với quy mô này, GLM 5.1 hứa hẹn sẽ mở ra những khả năng mới trong việc phân tích dữ liệu và tương tác người máy một cách tự nhiên như người thật.",
-            "output_name": "hg_glm51.mp4",
-            "background_color": [20, 40, 60],
-            "instruct": "female, young adult, low pitch",
-            "keywords": [
-                ["GLM 5.1", 0, 5],
-                ["754 TỶ THAM SỐ", 6, 11],
-                ["SIÊU MÔ HÌNH AI", 12, 16]
-            ]
-        }
-    ]
+  "global_settings": {
+    "default_voice": "female, young adult, low pitch",
+    "default_background_color": [30, 30, 30],
+    "video_fps": 24,
+    "video_resolution": [1280, 720]
+  },
+  "news_list": [
+    {
+      "id": "gemma4_001",
+      "url": "https://huggingface.co/google/gemma-4-27b",
+      "title": "Google Gemma 4 - Thế hệ Model AI Đa Phương Thức Mới Nhất",
+      "text": "Google vừa gây bất ngờ lớn cho cộng đồng AI vào dịp lễ Phục Sinh khi chính thức ra mắt Gemma 4 - thế hệ model mã nguồn mở mới nhất của họ trên nền tảng Hugging Face. Đây là dòng model đa phương thức multimodal với 4 phiên bản: Gemma 4 E2B có 2.3B tham số hiệu quả (5.1B với embeddings), hỗ trợ context window 128K token; Gemma 4 E4B với 4B tham số hiệu quả cũng hỗ trợ 128K; Gemma 4 26B A4B là kiến trúc Mixture-of-Experts với 4B tham số được kích hoạt trên tổng 26B, hỗ trợ 256K context; và phiên bản mạnh nhất Gemma 4 31B dense model với 256K context window. Điểm nổi bật là tất cả các model đều có chế độ Thinking cho phép xử lý các vấn đề phức tạp theo từng bước trước khi đưa ra câu trả lời cuối cùng. Về hiệu suất, Gemma 4 31B đạt điểm số LM Arena ước tính 1452, trong khi phiên bản 26B MoE đạt 1441 chỉ với 4B tham số active. Model hỗ trợ 140 ngôn ngữ, có khả năng nhận dạng đối tượng, đọc tài liệu PDF và OCR. Các model edge E2B và E4B còn hỗ trợ xử lý video và audio native. Đặc biệt, Gemma 4 có native support cho Function Calling cho phép AI hoạt động như virtual assistant. Model được release dưới license Apache 2.0 hoàn toàn mở. Bạn có thể tải model từ Hugging Face với các định dạng GGUF, Safetensors và PyTorch, hoặc chạy local với Ollama, LM Studio, hay Docker. Với LM Studio trên máy Bosgame M5, Gemma 4 31B đạt tốc độ hơn 10 tokens/giây, trong khi các model nhỏ hơn dễ dàng vượt 40 tokens/giây.",
+      "prompt": "TTS với giọng nữ trẻ, âm sắc trầm, tốc độ vừa phải, ngữ điệu tự nhiên như đang đọc tin công nghệ",
+      "output_name": "gemma4_overview.mp4",
+      "background_color": [44, 62, 80],
+      "instruct": "female, young adult, low pitch",
+      "keywords": [
+        ["GOOGLE GEMMA 4", 0, 5],
+        ["4 PHIÊN BẢN MỚI", 6, 12],
+        ["MULTIMODAL AI", 13, 17],
+        ["128K-256K CONTEXT", 18, 24],
+        ["APACHE 2.0 LICENSE", 25, 32]
+      ]
+    },
+    {
+      "id": "gemma4_002",
+      "url": "https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK",
+      "title": "Gemma-4-31B JANG-4M-CRACK - Phiên Bản Abliterated Cao Cấp",
+      "text": "Cộng đồng AI đang xôn xao với phiên bản Gemma-4-31B được tinh chỉnh đặc biệt mang mã hiệu JANG-4M-CRACK của nhóm nghiên cứu dealignai. Đây là phiên bản Abliterated - tức đã loại bỏ hoàn toàn cơ chế từ chối (refusal removal) của model gốc. Với kiến trúc Dense Transformer kết hợp Hybrid Sliding/Global Attention, model sử dụng profile JANG_4M với quantization Critical 8-bit và Compress 4-bit, cho kích thước chỉ 18GB nhưng vẫn giữ 74.5% điểm MMLU. Điểm ấn tượng nhất là khả năng tuân thủ HarmBench đạt 93.7% - cao hơn nhiều so với các phiên bản gốc, trong khi chỉ giảm 2% MMLU. JANG-4M-CRACK cũng có phiên bản MoE 26B với kích thước 15GB và 67.5% MMLU nhưng đạt 86.8% HarmBench. Nếu cần compliance tối đa (98.7%), có thể sử dụng biến thể JANG_2L CRACK với kích thước chỉ 9.9GB. Model hỗ trợ format JANG v2 (MLX-native safetensors) cho phép load tức thì. Lưu ý quan trọng: các phiên bản Gemma 4 yêu cầu inference engine hỗ trợ như vMLX 1.3.26 trở lên vì mlx_lm và mlx_vlm tiêu chuẩn chưa hỗ trợ Gemma 4. Model đã được tải xuống hơn 44,000 lượt chỉ trong vài ngày và nhận được 773 likes từ cộng đồng.",
+      "prompt": "TTS với giọng nam trưởng thành, âm sắc ấm, tốc độ chậm rãi, giải thích chi tiết từng thông số kỹ thuật",
+      "output_name": "gemma4_jang_crack.mp4",
+      "background_color": [38, 70, 83],
+      "instruct": "male, adult, warm tone",
+      "keywords": [
+        ["JANG-4M-CRACK", 0, 5],
+        ["ABLITERATED MODEL", 6, 11],
+        ["18GB DUY NHẤT", 12, 17],
+        ["93.7% HARMBENCH", 18, 25],
+        ["44,000 DOWNLOADS", 26, 33]
+      ]
+    },
+    {
+      "id": "glm51_001",
+      "url": "https://huggingface.co/zai-org/GLM-5.1",
+      "title": "GLM-5.1 - Siêu Model 754 Tỷ Tham Số Từ Z.AI",
+      "text": "Z.AI (đội ngũ phát triển dòng model GLM) vừa công bố GLM-5.1 - siêu model ngôn ngữ với quy mô khổng lồ 754 tỷ tham số, đánh dấu bước tiến vượt bậc trong lĩnh vực agentic engineering. Đây là model MoE (Mixture of Experts) với 256 experts và chỉ 8 được kích hoạt mỗi token (tức khoảng 44 tỷ tham số active). Model được huấn luyện hoàn toàn trên chip Huawei Ascend sử dụng MindSpore, thể hiện khả năng độc lập về mặt công nghệ. GLM-5.1 hỗ trợ context window 200K token và tối đa 128K token output - cực kỳ quan trọng cho các tác vụ dài hạn. Điểm đột phá là khả năng tự chủ làm việc liên tục lên đến 8 giờ - thực hiện hàng trăm vòng lặp và hàng nghìn tool calls mà không giảm hiệu quả. Trên benchmark SWE-Bench Pro, GLM-5.1 đạt 58.4 điểm, vượt trội so với GPT-5.4, Claude Opus 4.6 và Gemini 3.1 Pro. Model cũng dẫn đầu trên NL2Repo (tạo repository) và Terminal-Bench 2.0. Trong thử nghiệm thực tế, GLM-5.1 đã tự xây dựng một hệ thống desktop Linux hoàn chỉnh từ đầu trong 8 giờ, bao gồm file browser, terminal, text editor, system monitor, calculator và games với giao diện nhất quán. GLM-5.1 được release dưới license MIT, có thể deploy local qua SGLang, vLLM, xLLM, Transformers và KTransformers.",
+      "prompt": "TTS với giọng nữ trẻ, âm sắc sáng, tốc độ vừa, ngữ điệu hào hứng, nhấn mạnh các con số và thành tựu",
+      "output_name": "glm51_overview.mp4",
+      "background_color": [20, 40, 60],
+      "instruct": "female, young adult, energetic",
+      "keywords": [
+        ["GLM-5.1", 0, 5],
+        ["754 TỶ THAM SỐ", 6, 11],
+        ["8 GIỜ TỰ CHỦ", 12, 17],
+        ["58.4 SWE-BENCH PRO", 18, 27],
+        ["MIT LICENSE", 28, 33]
+      ]
+    }
+  ],
+  "tool_configs": {
+    "tts_engine": "omnivoice",
+    "video_generator": "moviepy",
+    "output_format": "mp4",
+    "audio_format": "wav"
+  }
 }

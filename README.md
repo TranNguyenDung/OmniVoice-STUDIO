@@ -1,6 +1,14 @@
 # OmniVoice STUDIO
 
-Công cụ chuyển văn bản thành giọng nói (TTS) với khả năng clone giọng nói.
+Công cụ tạo video tin tức AI với giọng nói tự nhiên sử dụng OmniVoice TTS và MoviePy.
+
+## Tính năng
+
+- Tạo video tin tức tự động từ văn bản
+- Hỗ trợ đa ngôn ngữ với OmniVoice
+- Tùy chỉnh giọng nói (voice design)
+- Overlay từ khóa với hiệu ứng fade
+- Xuất video chất lượng cao (1080p, 24fps)
 
 ## Cài đặt
 
@@ -15,33 +23,32 @@ Nếu có GPU NVIDIA, chạy:
 python install_gpu.py
 ```
 
-### 3. Cài đặt Frontend Dependencies
-```bash
-cd frontend
-npm install
-```
-
 ## Cách sử dụng
 
-### Chế độ Batch (Xử lý nhiều file)
+### Tạo Video Tin Tức
 
-1. Tạo file `input/content.json` với cấu trúc:
+1. Chỉnh sửa `news_config.json` với danh sách tin tức:
 ```json
-[
-  {
-    "text": "Nội dung cần chuyển thành giọng nói",
-    "ref_audio": "input/ten_file_mau.wav",
-    "ref_text": "Văn bản của file mẫu",
-    "instruct": "Hướng dẫn giọng nói",
-    "output_path": "output/ten_file_output.wav"
-  }
-]
+{
+  "news_list": [
+    {
+      "id": "news_001",
+      "text": "Nội dung tin tức...",
+      "keywords": [["TỪ KHÓA", 0, 5]],
+      "output_name": "video.mp4",
+      "background_color": [30, 30, 30],
+      "instruct": "female, young adult, low pitch"
+    }
+  ]
+}
 ```
 
 2. Chạy chương trình:
 ```bash
-python main.py
+python ai_news_video.py
 ```
+
+Video sẽ được tạo trong thư mục `output/`.
 
 ### Chế độ API Server
 ```bash
