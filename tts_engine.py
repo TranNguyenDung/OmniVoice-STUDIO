@@ -3,6 +3,7 @@ import torchaudio
 from pathlib import Path
 from typing import Union
 import os
+import numpy
 
 # To avoid reloading the model every time the function is called
 _model = None
@@ -58,8 +59,24 @@ def generate_tts(text: str, output_path: Union[str, Path], ref_audio: str = None
     
     audio = model.generate(**gen_args)
     
-    # Save with 24000 sample rate as in testOmniVoice.py
-    torchaudio.save(str(output_path), audio[0].cpu(), 24000)
+    # Handle different audio types
+    audio_data = audio[0] if isinstance(audio, (list, tuple)) else audio
+    
+    if isinstance(audio_data, torch.Tensor):
+        audio_tensor = audio_data.detach().cpu()
+    elif hasattr(audio_data, 'numpy'):
+        audio_tensor = audio_data.numpy()
+        if isinstance(audio_tensor, numpy.ndarray):
+            audio_tensor = torch.from_numpy(audio_tensor)
+    else:
+        audio_tensor = torch.from_numpy(audio_data)
+    
+    # Save with 24000 sample rate - use soundfile as fallback
+    try:
+        import soundfile as sf
+        sf.write(str(output_path), audio_tensor.numpy(), 24000)
+    except ImportError:
+        torchaudio.save(str(output_path), audio_tensor, 24000)
     print(f"Saved audio to: {output_path}")
     return str(output_path)
 
