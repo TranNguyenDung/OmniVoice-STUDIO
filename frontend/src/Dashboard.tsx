@@ -52,8 +52,8 @@ export default function Dashboard() {
             <div className="bg-orange-100 p-2 rounded-xl">
               <LayoutDashboard size={28} />
             </div>
-            <span>Chức năng sắp ra mắt</span>
-            <div className="px-2 py-0.5 bg-orange-200 rounded-md text-[10px] uppercase">Coming Soon</div>
+            <span>Ghép Audio & Video</span>
+            
           </button>
         </div>
 
