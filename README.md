@@ -156,7 +156,39 @@ npm install
 
 ## Cách sử dụng
 
-### Chế độ Web (khuyến nghị)
+### Cách 1: Chạy bằng run.bat (khuyến nghị)
+
+```bash
+.\run.bat
+```
+
+- Tự động khởi động Backend (port 8000) và Frontend (port 5173)
+- Mở trình duyệt tại: http://localhost:5173
+
+### Cách 2: Chạy từng phần
+
+**Backend:**
+```bash
+python web_api.py
+# hoặc
+python run.py
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+### Cách 3: Chỉ dùng Backend API
+
+```bash
+python run.py
+```
+
+Server chạy tại: http://localhost:8000
+
+---
 
 **1. Khởi động API Server:**
 ```bash
@@ -245,14 +277,16 @@ pip install imageio-ffmpeg
 
 ```
 OmniVoice STUDIO/
-├── web_api.py          # API server
-├── tts_engine.py      # Engine TTS
-├── requirements.txt   # Python dependencies
-├── install_gpu.py    # Script cài đặt GPU tự động
-├── input/             # File input và audio mẫu
-├── output/            # File audio/video đầu ra
-├── library_audio/    # Thư viện audio đã ghi âm
-└── frontend/         # Giao diện web (React + Vite)
+├── run.bat             # Script chạy nhanh (khuyến nghị - click đúp)
+├── run.py            # Script cài đặt + chạy backend
+├── web_api.py       # API server
+├── tts_engine.py    # Engine TTS
+├── requirements.txt # Python dependencies
+├── install_gpu.py  # Script cài đặt GPU tự động
+├── input/           # File input và audio mẫu
+├── output/          # File audio/video đầu ra
+├── library_audio/   # Thư viện audio đã ghi âm
+└── frontend/      # Giao diện web (React + Vite)
 ```
 
 ---
