@@ -23,6 +23,23 @@ from PIL import Image
 
 from moviepy.Effect import Effect
 
+import subprocess
+
+def check_nvidia_gpu():
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=5
+        )
+        return "h264_nvenc" in result.stdout
+    except:
+        return False
+
+HAS_NVIDIA_GPU = check_nvidia_gpu()
+
+import os
+NUM_THREADS = os.cpu_count() or 4
+FFMPEG_THREADS = max(4, NUM_THREADS // 2)
+
 
 # Custom Blur effect for MoviePy 2.x
 class Blur(Effect):
@@ -103,13 +120,13 @@ HAS_BLUR = True
 from moviepy.video.fx import MultiplyColor
 
 BASE_DIR = Path(__file__).resolve().parent
-INPUT_DIR = BASE_DIR / "input"
+LIBRARY_AUDIO_DIR = BASE_DIR / "library_audio"
 OUTPUT_DIR = BASE_DIR / "output"
 MEDIA_DIR = BASE_DIR / "media_uploads"
 VIDEO_OUT_DIR = BASE_DIR / "output_videos"
 TEMP_DEBUG_DIR = BASE_DIR / "temp_debug"
 
-for d in [INPUT_DIR, OUTPUT_DIR, MEDIA_DIR, VIDEO_OUT_DIR, TEMP_DEBUG_DIR]:
+for d in [LIBRARY_AUDIO_DIR, OUTPUT_DIR, MEDIA_DIR, VIDEO_OUT_DIR, TEMP_DEBUG_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="OmniVoice Web API")
@@ -122,7 +139,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/audio/input", StaticFiles(directory=str(INPUT_DIR)), name="input_audio")
+app.mount("/audio/library_audio", StaticFiles(directory=str(LIBRARY_AUDIO_DIR)), name="library_audio")
 app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 app.mount(
     "/video/output", StaticFiles(directory=str(VIDEO_OUT_DIR)), name="video_output"
@@ -148,8 +165,8 @@ async def generate(req: GenerateRequest):
     audio_filename = f"{filename_base}.wav"
     json_filename = f"{filename_base}.json"
 
-    output_path = INPUT_DIR / audio_filename
-    meta_path = INPUT_DIR / json_filename
+    output_path = LIBRARY_AUDIO_DIR / audio_filename
+    meta_path = LIBRARY_AUDIO_DIR / json_filename
 
     try:
         generate_tts(
@@ -174,7 +191,7 @@ async def generate(req: GenerateRequest):
         return {
             "status": "success",
             "filename": audio_filename,
-            "url": f"/audio/input/{audio_filename}",
+            "url": f"/audio/library_audio/{audio_filename}",
             "metadata": metadata,
         }
     except Exception as e:
@@ -186,7 +203,7 @@ async def generate(req: GenerateRequest):
 async def list_audios():
     try:
         files = []
-        for f in INPUT_DIR.glob("*.wav"):
+        for f in LIBRARY_AUDIO_DIR.glob("*.wav"):
             meta_file = f.with_suffix(".json")
             metadata = {}
             if meta_file.exists():
@@ -199,7 +216,7 @@ async def list_audios():
             files.append(
                 {
                     "name": f.name,
-                    "url": f"/audio/input/{f.name}",
+                    "url": f"/audio/library_audio/{f.name}",
                     "type": "input",
                     "mtime": f.stat().st_mtime,
                     "metadata": metadata,
@@ -228,6 +245,70 @@ async def upload_media(file: UploadFile = File(...)):
         "url": f"/media/{unique_filename}",
         "type": "video" if ext.lower() in [".mp4", ".mov", ".avi"] else "image",
     }
+
+
+@app.post("/upload_audio")
+async def upload_audio(
+    file: UploadFile = File(...),
+    text: Optional[str] = Form(None),
+    instruct: Optional[str] = Form(None),
+):
+    """Upload audio ghi âm vào thư viện (library_audio/)"""
+    ts = time.strftime("%Y%m%d_%H%M%S")
+    ext = Path(file.filename).suffix if file.filename else ".wav"
+    
+    # Sử dụng tên file từ frontend nếu có, không thì tạo tên mặc định
+    if file.filename and Path(file.filename).stem:
+        filename_base = Path(file.filename).stem
+    else:
+        filename_base = f"rec_{ts}_{uuid.uuid4().hex[:6]}"
+    audio_filename = f"{filename_base}{ext}"
+    json_filename = f"{filename_base}.json"
+    
+    audio_path = LIBRARY_AUDIO_DIR / audio_filename
+    meta_path = LIBRARY_AUDIO_DIR / json_filename
+
+    # Lưu file audio
+    with open(audio_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+
+    # Lưu metadata
+    metadata = {
+        "text": text or "",
+        "instruct": instruct or "",
+        "ref_text": text or "",
+        "created_at": ts,
+        "source": "record",
+    }
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+    return {
+        "status": "success",
+        "filename": audio_filename,
+        "url": f"/audio/library_audio/{audio_filename}",
+        "metadata": metadata,
+    }
+
+
+@app.delete("/audio/{filename:path}")
+async def delete_audio(filename: str):
+    """Xóa audio khỏi thư viện"""
+    audio_path = Path(filename)
+    if audio_path.is_absolute():
+        audio_file = LIBRARY_AUDIO_DIR / audio_path.name
+    else:
+        audio_file = LIBRARY_AUDIO_DIR / audio_path.name
+    
+    json_file = audio_file.with_suffix('.json')
+    
+    if audio_file.exists():
+        audio_file.unlink()
+    if json_file.exists():
+        json_file.unlink()
+    
+    return {"status": "success", "filename": audio_file.name}
 
 
 class VideoRequest(BaseModel):
@@ -369,7 +450,7 @@ async def generate_video(req: VideoRequest):
         # ============================================================
         print(f"\n=== BLOCK 2: LOAD AUDIO ===")
         audio_filename = Path(req.audio_url).name
-        audio_path = INPUT_DIR / audio_filename
+        audio_path = LIBRARY_AUDIO_DIR / audio_filename
 
         if not audio_path.exists():
             raise HTTPException(
@@ -410,62 +491,53 @@ async def generate_video(req: VideoRequest):
         print(f"[OK] Total media files: {len(valid_media)}")
 
         # ============================================================
-        # BLOCK 5: XỬ LÝ TỪNG MEDIA FILE -> CLIP
+        # BLOCK 5: XỬ LÝ TỪNG MEDIA FILE -> CLIP (PARALLEL)
         # Mục tiêu: Load từng media, áp dụng assembly layers (blur + opacity + scale)
         # Output: Mảng clips đã được assemble
         # ============================================================
-        print(f"\n=== BLOCK 5: XỬ LÝ TỪNG MEDIA -> CLIP ===")
+        print(f"\n=== BLOCK 5: XỬ LÝ TỪNG MEDIA -> CLIP (PARALLEL) ===")
+        from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        for i, m in enumerate(valid_media):
+        def process_single_media(args):
+            i, m, tw, th, blur_r, bg_op, img_dur = args
             m_path = MEDIA_DIR / m["filename"]
-            print(
-                f"\n--- Processing clip {i + 1}/{len(valid_media)}: {m['filename']} ---"
-            )
-
-            # Lấy settings cho từng media
-            m_duration = m.get("duration", img_duration)
+            m_duration = m.get("duration", img_dur)
             m_motion = m.get("motion", "none")
             m_motion_params = m.get("motion_params", {})
 
-            print(f"[5a] Loading: {m['filename']}")
-            print(f"[5a] Media settings: duration={m_duration}s, motion={m_motion}")
-
-            # 5a. Load clip gốc từ file
             if m["type"] == "image":
                 clip = ImageClip(str(m_path)).with_duration(m_duration).with_fps(24)
-                print(
-                    f"[5a] ImageClip created: {clip.w}x{clip.h}, fps={clip.fps}, duration={clip.duration}s"
-                )
             else:
-                video_clip = VideoFileClip(str(m_path))
-                clip = video_clip
-                temp_clips.append(video_clip)
-                print(
-                    f"[5a] VideoClip loaded (full): {video_clip.w}x{video_clip.h}, duration={video_clip.duration:.2f}s"
-                )
-            print(f"[5b] Final duration: {clip.duration:.2f}s")
+                clip = VideoFileClip(str(m_path))
 
-            # 5c. Áp dụng Assembly Layers (Background blur + Foreground contain)
-            print(
-                f"[5c] Applying assemble_clip_layers (blur={req.blur_radius}, opacity={req.bg_opacity}, motion={m_motion})"
-            )
             assembled_clip = assemble_clip_layers(
                 clip,
-                target_w,
-                target_h,
-                blur_radius=req.blur_radius,
-                bg_opacity=req.bg_opacity,
+                tw,
+                th,
+                blur_radius=blur_r,
+                bg_opacity=bg_op,
                 motion=m_motion if m["type"] == "image" else None,
                 motion_params=m_motion_params if m["type"] == "image" else None,
             )
-            print(
-                f"[5c] Assembled: {assembled_clip.w}x{assembled_clip.h}, duration={assembled_clip.duration:.2f}s"
-            )
+            return i, assembled_clip
 
-            # 5d. Thêm vào mảng clips
-            clips.append(assembled_clip)
-            temp_clips.append(assembled_clip)
-            print(f"[5d] Added to clips array. Total clips now: {len(clips)}")
+        tasks = [
+            (i, m, target_w, target_h, req.blur_radius, req.bg_opacity, img_duration)
+            for i, m in enumerate(valid_media)
+        ]
+
+        max_workers = min(len(valid_media), NUM_THREADS)
+        print(f"[5a] Processing {len(valid_media)} media with {max_workers} workers")
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(process_single_media, task): task[0] for task in tasks}
+            for future in as_completed(futures):
+                idx, result_clip = future.result()
+                clips.append(result_clip)
+                temp_clips.append(result_clip)
+                print(f"[5b] Media {idx + 1}/{len(valid_media)} done")
+
+        print(f"[5c] All media processed. Total clips: {len(clips)}")
 
         # ============================================================
         # BLOCK 6: KIỂM TRA TRƯỚC KHI GHÉP
@@ -494,9 +566,33 @@ async def generate_video(req: VideoRequest):
 
         one_cycle_path = temp_debug_path / "01_one_cycle.mp4"
         print(f"[7a] Saving one cycle to: {one_cycle_path}")
-        one_cycle_video.write_videofile(
-            str(one_cycle_path), fps=24, codec="libx264", audio=False, remove_temp=True
-        )
+        
+        if HAS_NVIDIA_GPU:
+            print(f"[GPU] Using NVIDIA encoder h264_nvenc, threads={FFMPEG_THREADS}")
+            one_cycle_video.write_videofile(
+                str(one_cycle_path),
+                fps=24,
+                codec="h264_nvenc",
+                audio=False,
+                remove_temp=True,
+                preset="p4",
+                bitrate="4000k",
+                ffmpeg_params=["-threads", str(FFMPEG_THREADS)],
+                logger="bar",
+            )
+        else:
+            print(f"[CPU] Using libx264 with ultrafast, threads={FFMPEG_THREADS}")
+            one_cycle_video.write_videofile(
+                str(one_cycle_path),
+                fps=24,
+                codec="libx264",
+                audio=False,
+                remove_temp=True,
+                preset="ultrafast",
+                threads=FFMPEG_THREADS,
+                bitrate="3000k",
+                logger="bar",
+            )
 
         if target_duration > one_cycle_duration:
             print(
@@ -553,13 +649,29 @@ async def generate_video(req: VideoRequest):
 
         final_debug_path = temp_debug_path / "02_final_with_audio.mp4"
         print(f"[9a] Saving final video to debug: {final_debug_path}")
-        final_video.write_videofile(
-            str(final_debug_path),
-            fps=24,
-            codec="libx264",
-            audio_codec="aac",
-            remove_temp=True,
-        )
+        if HAS_NVIDIA_GPU:
+            final_video.write_videofile(
+                str(final_debug_path),
+                fps=24,
+                codec="h264_nvenc",
+                audio_codec="aac",
+                remove_temp=True,
+                preset="p4",
+                bitrate="4000k",
+                logger="bar",
+            )
+        else:
+            final_video.write_videofile(
+                str(final_debug_path),
+                fps=24,
+                codec="libx264",
+                audio_codec="aac",
+                remove_temp=True,
+                preset="ultrafast",
+                threads=FFMPEG_THREADS,
+                bitrate="3000k",
+                logger="bar",
+            )
 
         # ============================================================
         # BLOCK 10: EXPORT VIDEO
@@ -572,17 +684,38 @@ async def generate_video(req: VideoRequest):
         print(f"[DEBUG] Check temp files at: {temp_debug_path}")
 
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: final_video.write_videofile(
-                str(output_path),
-                fps=24,
-                codec="libx264",
-                audio_codec="aac",
-                temp_audiofile=f"temp-audio-{uuid.uuid4()}.m4a",
-                remove_temp=True,
-            ),
-        )
+        
+        if HAS_NVIDIA_GPU:
+            await loop.run_in_executor(
+                None,
+                lambda: final_video.write_videofile(
+                    str(output_path),
+                    fps=24,
+                    codec="h264_nvenc",
+                    audio_codec="aac",
+                    temp_audiofile=f"temp-audio-{uuid.uuid4()}.m4a",
+                    remove_temp=True,
+                    preset="p4",
+                    bitrate="4000k",
+                    logger="bar",
+                ),
+            )
+        else:
+            await loop.run_in_executor(
+                None,
+                lambda: final_video.write_videofile(
+                    str(output_path),
+                    fps=24,
+                    codec="libx264",
+                    audio_codec="aac",
+                    temp_audiofile=f"temp-audio-{uuid.uuid4()}.m4a",
+                    remove_temp=True,
+                    preset="ultrafast",
+                    threads=FFMPEG_THREADS,
+                    bitrate="3000k",
+                    logger="bar",
+                ),
+            )
 
         print(f"\n=== BLOCK 11: HOÀN TẤT ===")
         print(f"[SUCCESS] Video generated: {output_filename}")
@@ -624,5 +757,8 @@ async def generate_video(req: VideoRequest):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
 
+    workers = os.cpu_count() or 4
+    print(f"Starting server with {workers} workers...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
