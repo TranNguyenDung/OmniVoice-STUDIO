@@ -10,6 +10,7 @@ export default defineConfig({
       '/generate': 'http://localhost:8000',
       '/list_audios': 'http://localhost:8000',
       '/upload_media': 'http://localhost:8000',
+      '/upload_audio': 'http://localhost:8000',
       '/generate_video': 'http://localhost:8000',
       '/media': 'http://localhost:8000',
       '/video/output': 'http://localhost:8000',

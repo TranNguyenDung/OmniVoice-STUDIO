@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mic, Sparkles, Music, Shield, Zap, ArrowRight, LayoutDashboard, Settings } from 'lucide-react';
+import { Mic, Sparkles, Music, Shield, Zap, ArrowRight, LayoutDashboard, Settings, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
@@ -43,6 +43,16 @@ export default function Dashboard() {
             </div>
             <span>Bắt đầu Tạo Âm Thanh</span>
             <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <button
+            onClick={() => navigate('/clone')}
+            className="group bg-white hover:bg-orange-100 text-orange-600 px-10 py-6 rounded-[32px] text-xl font-black flex items-center gap-4 border-2 border-orange-200 shadow-xl transition-all active:scale-[0.98] hover:-translate-y-1"
+          >
+            <div className="bg-orange-100 p-2 rounded-xl">
+              <Mic size={28} />
+            </div>
+            <span>Record Audio</span>
           </button>
 
           <button
