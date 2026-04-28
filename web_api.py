@@ -9,19 +9,19 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List
 from pathlib import Path
-from tts_engine import generate_tts
+from tts_engine import generate_tts, list_local_snapshots, get_current_snapshot, set_current_snapshot
 from moviepy import (
     VideoFileClip,
     ImageClip,
     AudioFileClip,
     concatenate_videoclips,
     CompositeVideoClip,
+    Effect,
 )
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from PIL import Image
-
-from moviepy.Effect import Effect
+import moviepy.video.fx as vfx
 
 import subprocess
 
@@ -117,8 +117,6 @@ class KenBurnsEffect(Effect):
 
 HAS_BLUR = True
 
-from moviepy.video.fx import MultiplyColor
-
 BASE_DIR = Path(__file__).resolve().parent
 LIBRARY_AUDIO_DIR = BASE_DIR / "library_audio"
 OUTPUT_DIR = BASE_DIR / "output"
@@ -153,6 +151,40 @@ class GenerateRequest(BaseModel):
     ref_text: Optional[str] = None
     speed: Optional[float] = 1.0
     duration: Optional[float] = None
+    snapshot_id: Optional[str] = None
+
+
+@app.get("/list_snapshots")
+async def list_snapshots():
+    """API lấy danh sách các snapshot model có sẵn"""
+    try:
+        snapshots = list_local_snapshots()
+        
+        # Thêm thông tin snapshot hiện tại đang dùng
+        current = get_current_snapshot()
+        
+        return {
+            "snapshots": snapshots,
+            "current": current
+        }
+    except Exception as e:
+        print(f"Error listing snapshots: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/set_snapshot")
+async def set_snapshot(snapshot_id: str):
+    """API chọn snapshot model để sử dụng"""
+    try:
+        set_current_snapshot(snapshot_id)
+        return {
+            "success": True,
+            "snapshot_id": snapshot_id,
+            "message": f"Switched to snapshot {snapshot_id[:8]}..."
+        }
+    except Exception as e:
+        print(f"Error setting snapshot: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/generate")
@@ -177,6 +209,7 @@ async def generate(req: GenerateRequest):
             instruct=req.instruct,
             speed=req.speed,
             duration=req.duration,
+            snapshot_id=req.snapshot_id,
         )
 
         metadata = {
@@ -228,6 +261,23 @@ async def list_audios():
     except Exception as e:
         print(f"Error listing audios: {e}")
         return []
+
+
+@app.delete("/delete_audio_item")
+async def delete_audio_item(filename: str):
+    try:
+        file_path = LIBRARY_AUDIO_DIR / filename
+        meta_file = LIBRARY_AUDIO_DIR / (Path(filename).stem + ".json")
+        
+        if file_path.exists():
+            file_path.unlink()
+        if meta_file.exists():
+            meta_file.unlink()
+            
+        return {"success": True, "message": f"Deleted {filename}"}
+    except Exception as e:
+        print(f"Error deleting audio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/upload_media")

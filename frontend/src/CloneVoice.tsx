@@ -418,7 +418,7 @@ export default function RecordAudio() {
 
   return (
     <div className="min-h-screen bg-orange-50 font-sans text-orange-950 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         
         <button
           onClick={() => navigate('/')}
@@ -433,9 +433,9 @@ export default function RecordAudio() {
           Ghi âm, kéo thả audio hoặc chọn từ thư viện để lưu lại
         </p>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-3 gap-8">
           
-          <div className="space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             
             {/* Text Content Input */}
             <div className="bg-white p-6 rounded-3xl border border-orange-100 shadow-xl">
@@ -444,7 +444,7 @@ export default function RecordAudio() {
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
                 placeholder="Nhập nội dung bạn muốn đọc..."
-                className="w-full p-4 bg-orange-50 rounded-2xl border-2 border-orange-100 focus:border-orange-300 focus:outline-none font-medium resize-none h-24"
+                className="w-full p-4 bg-orange-50 rounded-2xl border-2 border-orange-100 focus:border-orange-300 focus:outline-none font-medium resize-y min-h-[300px]"
               />
               
               <div className="mt-4">

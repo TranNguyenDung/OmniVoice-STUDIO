@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Download, Mic, Settings, Music, RefreshCw, Volume2, Copy, X, Sparkles, FileJson, ArrowLeft } from 'lucide-react';
+import { Play, Download, Mic, Settings, Music, RefreshCw, Volume2, Copy, X, Sparkles, FileJson, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface AudioItem {
@@ -13,6 +13,16 @@ interface AudioItem {
     speed?: number;
     duration?: number;
     created_at?: string;
+  };
+}
+
+interface Snapshot {
+  id: string;
+  name: string;
+  path: string;
+  created_at?: string;
+  llm_config?: {
+    _name_or_path?: string;
   };
 }
 
@@ -73,6 +83,9 @@ export default function SoundStudio() {
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null);
 
   useEffect(() => {
     const parts = [gender, age, pitch];
@@ -83,7 +96,21 @@ export default function SoundStudio() {
 
   useEffect(() => {
     fetchRecentAudios();
+    fetchSnapshots();
   }, []);
+
+  const fetchSnapshots = async () => {
+    try {
+      const response = await fetch('/list_snapshots');
+      if (response.ok) {
+        const data = await response.json();
+        setSnapshots(data.snapshots || []);
+        setSelectedSnapshot(data.current);
+      }
+    } catch (err) {
+      console.error('Failed to fetch snapshots', err);
+    }
+  };
 
   const fetchRecentAudios = async () => {
     try {
@@ -110,17 +137,34 @@ export default function SoundStudio() {
     }
   };
 
+  const handleDeleteAudio = async (e: React.MouseEvent, audio: AudioItem) => {
+    e.stopPropagation();
+    if (!confirm(`Xoá "${audio.name}"?`)) return;
+    
+    try {
+      const response = await fetch(`/delete_audio?filename=${encodeURIComponent(audio.name)}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        fetchRecentAudios();
+      }
+    } catch (err) {
+      console.error('Failed to delete audio', err);
+    }
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError(null);
     try {
-      const body = { 
-        text, 
-        instruct, 
-        speed: 1.0,
-        duration: null,
+const body = {
+        text,
+        instruct: refAudio ? '' : instruct,
         ref_audio: refAudio ? refAudio.url : null,
-        ref_text: refAudio ? refText : null
+        ref_text: refAudio ? refText : null,
+        speed: 1.0,
+        snapshot_id: selectedSnapshot
       };
 
       const response = await fetch('/generate', {
@@ -168,10 +212,29 @@ export default function SoundStudio() {
           </div>
         </header>
 
+        {snapshots.length > 0 && (
+          <section className="bg-white p-4 rounded-2xl border-2 border-orange-100 shadow-lg">
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-bold text-orange-500 uppercase tracking-wider">Model:</label>
+              <select
+                value={selectedSnapshot || ''}
+                onChange={(e) => setSelectedSnapshot(e.target.value)}
+                className="flex-1 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-sm text-orange-900 focus:ring-2 focus:ring-orange-300 outline-none"
+              >
+                {snapshots.map((snap) => (
+                  <option key={snap.id} value={snap.id}>
+                    {snap.id.slice(0, 8)} {snap.created_at ? `(${snap.created_at})` : ''} - {snap.llm_config?._name_or_path || 'OmniVoice'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </section>
+        )}
+
         <section className="bg-white p-6 rounded-[32px] border-2 border-orange-100 shadow-xl">
           <label className="block text-[10px] font-black text-orange-400 uppercase tracking-[0.2em] mb-4">Nội dung văn bản</label>
           <textarea
-            className="w-full h-40 bg-orange-50/30 border border-orange-100 rounded-2xl p-5 text-xl text-orange-900 focus:ring-4 focus:ring-orange-100 focus:border-orange-300 outline-none resize-none transition-all placeholder:text-orange-200"
+            className="w-full min-h-[200px] bg-orange-50/30 border border-orange-100 rounded-2xl p-5 text-xl text-orange-900 focus:ring-4 focus:ring-orange-100 focus:border-orange-300 outline-none resize-y transition-all placeholder:text-orange-200"
             placeholder="Nhập nội dung cần chuyển thành giọng nói..."
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -248,12 +311,17 @@ export default function SoundStudio() {
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-orange-50">
-             <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 flex items-center justify-between">
-                <div>
+             <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <span className="text-[9px] font-black text-orange-400 uppercase block mb-1">Instruct Preview</span>
-                  <input value={instruct} onChange={(e) => setInstruct(e.target.value)} className="w-full bg-transparent text-xs text-orange-600 font-bold italic outline-none" />
+                  <textarea 
+                    value={instruct} 
+                    onChange={(e) => setInstruct(e.target.value)} 
+                    rows={2}
+                    className="w-full bg-transparent text-xs text-orange-600 font-bold italic outline-none resize-none" 
+                  />
                 </div>
-                <Settings size={16} className="text-orange-200" />
+                <Settings size={16} className="text-orange-200 shrink-0 mt-1" />
               </div>
           </div>
         </section>
@@ -307,7 +375,7 @@ export default function SoundStudio() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-black truncate text-orange-900 group-hover:text-orange-600">{audio.name}</p>
-                      {audio.metadata?.text && <FileJson size={12} className="text-emerald-500 shrink-0 ml-2" />}
+                      <button onClick={(e) => handleDeleteAudio(e, audio)} className="p-2 hover:bg-red-100 rounded-lg text-red-300 hover:text-red-500 transition-all shrink-0"><Trash2 size={14} /></button>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                        <p className="text-[8px] font-black uppercase text-orange-300">Reference Wave</p>

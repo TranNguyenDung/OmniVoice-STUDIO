@@ -16,6 +16,9 @@ git+https://github.com/k2-fsa/omnivoice.git
 numpy>=1.21.0
 scipy>=1.7.0
 
+# Tokenizer dependencies (required for HuggingFace model tokenization)
+sentencepiece>=0.1.97
+
 # Web API support
 fastapi>=0.100.0
 uvicorn>=0.22.0

@@ -47,3 +47,7 @@ media_uploads/
 # Test config
 test_config.json
 TODO.md
+
+# Model and audio library
+model/
+library_audio/
