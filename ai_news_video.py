@@ -7,12 +7,8 @@ import argparse
 import wave
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
-try:
-    from moviepy import TextClip, CompositeVideoClip, ColorClip, AudioFileClip
-    import moviepy.video.fx as vfx
-except Exception:
-    from moviepy.editor import TextClip, CompositeVideoClip, ColorClip, AudioFileClip
-    import moviepy.video.fx as vfx
+from moviepy import TextClip, CompositeVideoClip, ColorClip, AudioFileClip
+import moviepy.video.fx as vfx
 
 from tts_engine import generate_tts
 

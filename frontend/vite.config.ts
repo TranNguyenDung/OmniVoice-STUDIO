@@ -9,6 +9,8 @@ export default defineConfig({
       '/audio': 'http://localhost:8000',
       '/generate': 'http://localhost:8000',
       '/list_audios': 'http://localhost:8000',
+      '/list_snapshots': 'http://localhost:8000',
+      '/set_snapshot': 'http://localhost:8000',
       '/upload_media': 'http://localhost:8000',
       '/upload_audio': 'http://localhost:8000',
       '/generate_video': 'http://localhost:8000',

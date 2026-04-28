@@ -31,6 +31,8 @@ MODEL_VERSION_FILE = MODEL_CACHE_DIR / "version.json"  # File lưu version hiệ
 
 _model = None                              # Model đã load
 _model_version = None                       # Version đang dùng
+# Clear current snapshot to force using the latest
+_current_snapshot = None
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -75,6 +77,64 @@ def get_latest_model_version() -> Optional[str]:
     except Exception as e:
         print(f"Warning: Cannot check model version: {e}")
         return None
+
+
+def list_local_snapshots():
+    """Lấy danh sách các snapshot có sẵn trong local"""
+    snapshots = []
+    snapshots_dir = MODEL_CACHE_DIR / "models--k2-fsa--OmniVoice" / "snapshots"
+    
+    if not snapshots_dir.exists():
+        return []
+    
+    for snap_dir in snapshots_dir.iterdir():
+        if snap_dir.is_dir() and (snap_dir / "model.safetensors").exists():
+            # Kiểm tra có tokenizer chưa (bắt buộc)
+            if not (snap_dir / "tokenizer.json").exists():
+                continue
+            
+            config_path = snap_dir / "config.json"
+            model_info = {
+                "id": snap_dir.name,
+                "name": snap_dir.name[:8],
+                "path": str(snap_dir),
+            }
+            
+            if config_path.exists():
+                try:
+                    with open(config_path, 'r') as f:
+                        config = json.load(f)
+                        model_info["llm_config"] = config.get("llm_config", {})
+                except:
+                    pass
+            
+            model_info["created_at"] = time.strftime("%d/%m/%Y", time.localtime(snap_dir.stat().st_mtime))
+            snapshots.append(model_info)
+    
+    snapshots.sort(key=lambda x: x["id"], reverse=True)
+    return snapshots
+
+
+def get_current_snapshot() -> Optional[str]:
+    """Lấy snapshot hiện tại đang dùng"""
+    return _current_snapshot
+
+
+def set_current_snapshot(snapshot_id: str):
+    """Set snapshot sử dụng, reload model nếu cần"""
+    global _current_snapshot
+    
+    snapshots = list_local_snapshots()
+    snapshot_ids = [s["id"] for s in snapshots]
+    
+    if snapshot_id not in snapshot_ids:
+        raise ValueError(f"Snapshot {snapshot_id[:8]}... not found or missing tokenizer. Available: {[s['id'][:8] for s in snapshots]}")
+    
+    if _current_snapshot == snapshot_id and _model is not None:
+        return _model
+    
+    _current_snapshot = snapshot_id
+    return load_model(force_reload=True, snapshot_id=snapshot_id)
 
 
 def get_local_model_version() -> Optional[str]:
@@ -125,15 +185,36 @@ def backup_model():
         print(f"Warning: Cannot backup model: {e}")
 
 
-def load_model(force_reload: bool = False):
+def load_model(force_reload: bool = False, snapshot_id: str = None):
     """
     Load model từ local cache.
     Nếu có version mới trên HuggingFace thì backup model cũ và tải version mới.
     
     Args:
         force_reload: True nếu muốn load lại model (bỏ qua cache)
+        snapshot_id: Chỉ định snapshot cụ thể (nếu None thì dùng latest)
     """
-    global _model, _model_version
+    global _model, _model_version, _current_snapshot
+    
+    # Nếu snapshot_id không được chỉ định, tìm snapshot mới nhất có đầy đủ file
+    if snapshot_id is None:
+        snapshots = list_local_snapshots()
+        if snapshots:
+            # Ưu tiên snapshot mới nhất có tokenizer
+            for snap in snapshots:
+                snap_path = Path(snap["path"])
+                if (snap_path / "tokenizer.json").exists() or (snap_path / "tokenizer_config.json").exists():
+                    snapshot_id = snap["id"]
+                    print(f"Auto-selected snapshot with tokenizer: {snapshot_id}")
+                    break
+            else:
+                snapshot_id = None
+    else:
+        # Snapshot cụ thể được chỉ định
+        if _current_snapshot == snapshot_id and _model is not None and not force_reload:
+            print(f"Using cached OmniVoice model (snapshot: {snapshot_id})")
+            return _model
+        _current_snapshot = snapshot_id
     
     # Nếu model đã load và không cần reload thì return
     if _model is not None and not force_reload:
@@ -142,19 +223,25 @@ def load_model(force_reload: bool = False):
     
     print("Loading OmniVoice model...")
     
-    # Kiểm tra version mới nhất
-    latest_version = get_latest_model_version()
-    local_version = get_local_model_version()
-    
-    print(f"Local version: {local_version}")
-    print(f"Latest version: {latest_version}")
-    
-    # Nếu có version mới thì backup và reload
-    if latest_version and latest_version != local_version:
-        print(f"⚠️ New model version available! Downloading...")
-        backup_model()
+    # Xác định đường dẫn model
+    model_path = MODEL_REPO
+    if snapshot_id:
+        model_path = str(MODEL_CACHE_DIR / "models--k2-fsa--OmniVoice" / "snapshots" / snapshot_id)
+        print(f"Loading specific snapshot: {snapshot_id}")
     else:
-        print(f"✓ Using local model (version: {local_version})")
+        # Kiểm tra version mới nhất
+        latest_version = get_latest_model_version()
+        local_version = get_local_model_version()
+        
+        print(f"Local version: {local_version}")
+        print(f"Latest version: {latest_version}")
+        
+        # Nếu có version mới thì backup và reload
+        if latest_version and latest_version != local_version:
+            print("[!] New model version available! Downloading...")
+            backup_model()
+        else:
+            print("[OK] Using local model (version: {local_version})")
     
     # Thiết lập device
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -167,18 +254,22 @@ def load_model(force_reload: bool = False):
         
         # Load từ cache (sẽ tự động tải về nếu chưa có)
         _model = OmniVoice.from_pretrained(
-            MODEL_REPO,
+            model_path,
             device_map=device,
             dtype=dtype,
-            cache_dir=str(MODEL_CACHE_DIR)  # Cache vào thư mục local
+            cache_dir=str(MODEL_CACHE_DIR)
         )
         
         # Lưu version sau khi load thành công
-        if latest_version:
-            save_model_version(latest_version)
-            _model_version = latest_version
+        if snapshot_id:
+            _model_version = snapshot_id
+        else:
+            latest_version = get_latest_model_version()
+            if latest_version:
+                save_model_version(latest_version)
+                _model_version = latest_version
         
-        print(f"✓ Model loaded successfully!")
+        print("[OK] Model loaded successfully!")
         return _model
         
     except Exception as e:
@@ -196,21 +287,22 @@ def load_model(force_reload: bool = False):
                     device_map=device,
                     dtype=dtype,
                 )
-                print("✓ Model loaded from backup!")
+                print("[OK] Model loaded from backup!")
                 return _model
             except Exception as e2:
                 print(f"Cannot load from backup: {e2}")
         raise
 
 
-def get_model(force_reload: bool = False):
+def get_model(force_reload: bool = False, snapshot_id: str = None):
     """
     Get model instance (wrapper cho compatibility)
     
     Args:
         force_reload: True để reload model mới
+        snapshot_id: Chỉ định snapshot cụ thể (nếu None thì dùng latest)
     """
-    return load_model(force_reload=force_reload)
+    return load_model(force_reload=force_reload, snapshot_id=snapshot_id)
 
 
 # =============================================================================
@@ -225,7 +317,8 @@ def generate_tts(
     instruct: str = None,
     speed: float = 1.0,
     duration: float = None,
-    force_reload_model: bool = False
+    force_reload_model: bool = False,
+    snapshot_id: str = None
 ):
     """
     Generates TTS using OmniVoice model.
@@ -245,7 +338,7 @@ def generate_tts(
         force_reload_model: True nếu muốn reload model trước khi generate
     """
     # Load model (re-use cached model)
-    model = get_model(force_reload=force_reload_model)
+    model = get_model(force_reload=force_reload_model, snapshot_id=snapshot_id)
     
     print(f"Generating TTS: {text[:50] if text else 'N/A'}...")
     
