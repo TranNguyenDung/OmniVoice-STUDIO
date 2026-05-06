@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mic, Sparkles, Music, Shield, Zap, ArrowRight, LayoutDashboard, Settings, Copy } from 'lucide-react';
+import { Mic, Sparkles, Music, Shield, Zap, ArrowRight, LayoutDashboard, Settings, Copy, Film } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
@@ -64,6 +64,16 @@ export default function Dashboard() {
             </div>
             <span>Ghép Audio & Video</span>
             
+          </button>
+
+          <button
+            onClick={() => navigate('/ffmpeg')}
+            className="group bg-white hover:bg-blue-100 text-blue-600 px-10 py-6 rounded-[32px] text-xl font-black flex items-center gap-4 border-2 border-blue-200 shadow-xl transition-all active:scale-[0.98] hover:-translate-y-1"
+          >
+            <div className="bg-blue-100 p-2 rounded-xl">
+              <Film size={28} />
+            </div>
+            <span>FFmpeg Studio</span>
           </button>
         </div>
 

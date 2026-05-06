@@ -6,16 +6,22 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/audio': 'http://localhost:8000',
-      '/generate': 'http://localhost:8000',
-      '/list_audios': 'http://localhost:8000',
-      '/list_snapshots': 'http://localhost:8000',
-      '/set_snapshot': 'http://localhost:8000',
-      '/upload_media': 'http://localhost:8000',
-      '/upload_audio': 'http://localhost:8000',
-      '/generate_video': 'http://localhost:8000',
-      '/media': 'http://localhost:8000',
-      '/video/output': 'http://localhost:8000',
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/audio/library_audio': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/media': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/video/output': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     }
   }
 })
