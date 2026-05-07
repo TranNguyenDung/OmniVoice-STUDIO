@@ -182,7 +182,7 @@ export default function RecordAudio() {
 
   const fetchAudioLibrary = async () => {
     try {
-      const response = await fetch('/list_audios');
+      const response = await fetch('/api/audio/list');
       const data = await response.json();
       setAudioLibrary(data);
     } catch (err) {
@@ -315,7 +315,7 @@ export default function RecordAudio() {
       formData.append('text', textContent);
       formData.append('instruct', 'record');
       
-      const res = await fetch('/upload_audio', {
+      const res = await fetch('/api/audio/upload', {
         method: 'POST',
         body: formData,
       });

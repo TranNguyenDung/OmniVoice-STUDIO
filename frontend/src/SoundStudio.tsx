@@ -101,7 +101,7 @@ export default function SoundStudio() {
 
   const fetchSnapshots = async () => {
     try {
-      const response = await fetch('/list_snapshots');
+      const response = await fetch('/api/tts/list_snapshots');
       if (response.ok) {
         const data = await response.json();
         setSnapshots(data.snapshots || []);
@@ -114,7 +114,7 @@ export default function SoundStudio() {
 
   const fetchRecentAudios = async () => {
     try {
-      const response = await fetch('/list_audios');
+      const response = await fetch('/api/audio/list');
       if (response.ok) {
         const data = await response.json();
         setRecentAudios(data);
@@ -142,7 +142,7 @@ export default function SoundStudio() {
     if (!confirm(`Xoá "${audio.name}"?`)) return;
     
     try {
-      const response = await fetch(`/delete_audio?filename=${encodeURIComponent(audio.name)}`, {
+      const response = await fetch(`/api/audio/delete?filename=${encodeURIComponent(audio.name)}`, {
         method: 'DELETE',
       });
       
@@ -167,7 +167,7 @@ const body = {
         snapshot_id: selectedSnapshot
       };
 
-      const response = await fetch('/generate', {
+      const response = await fetch('/api/tts/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

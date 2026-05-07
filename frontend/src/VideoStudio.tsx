@@ -72,7 +72,7 @@ export default function VideoStudio() {
 
   const fetchAudios = async () => {
     try {
-      const response = await axios.get('/list_audios');
+      const response = await axios.get('/api/audio/list');
       setAudios(response.data);
     } catch (err) {
       console.error('Failed to fetch audios', err);
@@ -129,7 +129,7 @@ export default function VideoStudio() {
       const formData = new FormData();
       formData.append('file', item.file);
       try {
-        const response = await axios.post('/upload_media', formData);
+        const response = await axios.post('/api/video/upload_media', formData);
         setMediaItems(prev => prev.map(m => 
           m.id === item.id ? { ...m, status: 'ready', remoteFilename: response.data.filename } : m
         ));
@@ -162,7 +162,7 @@ export default function VideoStudio() {
     setProgress(10);
 
     try {
-      const response = await axios.post('/generate_video', {
+      const response = await axios.post('/api/video/generate', {
         audio_url: selectedAudio.url,
         media_files: readyMedia.map(m => ({
           filename: m.remoteFilename,
