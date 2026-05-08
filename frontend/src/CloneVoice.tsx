@@ -360,7 +360,7 @@ export default function RecordAudio() {
     if (!confirm(`Xóa "${item.name}"?`)) return;
     
     try {
-      const res = await fetch(`/audio/${item.name}`, { method: 'DELETE' });
+      const res = await fetch(`/api/audio/delete?filename=${encodeURIComponent(item.name)}`, { method: 'DELETE' });
       if (res.ok) {
         await fetchAudioLibrary();
         if (audioUrl === item.url) {

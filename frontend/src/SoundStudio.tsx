@@ -95,8 +95,10 @@ export default function SoundStudio() {
   }, [gender, age, pitch, style, accent]);
 
   useEffect(() => {
+    const ac = new AbortController();
     fetchRecentAudios();
     fetchSnapshots();
+    return () => ac.abort();
   }, []);
 
   const fetchSnapshots = async () => {
@@ -158,7 +160,7 @@ export default function SoundStudio() {
     setIsGenerating(true);
     setError(null);
     try {
-const body = {
+      const body = {
         text,
         instruct: refAudio ? '' : instruct,
         ref_audio: refAudio ? refAudio.url : null,
@@ -364,9 +366,9 @@ const body = {
               <p className="font-black text-xs uppercase tracking-widest">Library Empty</p>
             </div>
           ) : (
-            recentAudios.map((audio, i) => (
+            recentAudios.map((audio) => (
               <div 
-                key={i} 
+                key={audio.name} 
                 onClick={() => handleSelectItem(audio)}
                 className={`p-6 rounded-[28px] border-2 transition-all cursor-pointer group ${refAudio?.url === audio.url ? 'bg-white border-orange-400 shadow-xl scale-[1.02]' : 'bg-white/50 border-orange-50 hover:border-orange-200 hover:bg-white'}`}
               >
