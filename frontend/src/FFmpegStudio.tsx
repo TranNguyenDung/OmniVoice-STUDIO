@@ -15,6 +15,7 @@ interface MediaFile {
   file: File;
   preview: string;
   type: 'video' | 'audio';
+  duration?: number;
 }
 
 interface AudioItem {
@@ -42,6 +43,32 @@ interface SRTSegment {
   endTimeSec: number;
   text: string;
 }
+
+const getVideoDuration = (file: File): Promise<number> =>
+  new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(video.duration);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(0);
+    };
+    video.src = url;
+  });
+
+const formatDuration = (seconds: number): string => {
+  if (!seconds || seconds <= 0) return '0s';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+};
 
 export default function FFmpegStudio() {
   const navigate = useNavigate();
@@ -284,16 +311,18 @@ export default function FFmpegStudio() {
     }
   };
 
-  const onVideoDrop = (acceptedFiles: File[]) => {
-    const newFiles = acceptedFiles
-      .filter(file => file.type.startsWith('video/'))
-      .map(file => ({
-        id: Math.random().toString(36).substr(2, 9),
-        file,
-        preview: URL.createObjectURL(file),
-        type: 'video' as const
-      }));
-    setVideoFiles(prev => [...prev, ...newFiles]);
+  const onVideoDrop = async (acceptedFiles: File[]) => {
+    const videoFiles = acceptedFiles.filter(file => file.type.startsWith('video/'));
+    const items: MediaFile[] = videoFiles.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      file,
+      preview: URL.createObjectURL(file),
+      type: 'video' as const,
+      duration: undefined
+    }));
+    const durations = await Promise.all(items.map(item => getVideoDuration(item.file)));
+    items.forEach((item, i) => { item.duration = durations[i]; });
+    setVideoFiles(prev => [...prev, ...items]);
   };
 
   const onAudioDrop = (acceptedFiles: File[]) => {
@@ -475,6 +504,16 @@ export default function FFmpegStudio() {
                       </button>
                     </div>
                   ))}
+                  <div className="flex items-center justify-between pt-2 border-t border-amber-200">
+                    <span className="text-xs font-semibold text-amber-800 flex items-center gap-1">
+                      <Clock size={14} />
+                      Total: {(() => {
+                        const total = videoFiles.reduce((sum, v) => sum + (v.duration || 0), 0);
+                        return formatDuration(total);
+                      })()}
+                    </span>
+                    <span className="text-xs text-gray-500">{videoFiles.length} video(s)</span>
+                  </div>
                 </div>
               )}
             </div>
