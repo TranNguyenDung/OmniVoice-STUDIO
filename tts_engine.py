@@ -395,12 +395,26 @@ def generate_tts(
     
     # Save audio (24kHz sample rate)
     print(f"Saving audio to: {output_path}")
-    print(f"Audio tensor shape: {audio_tensor.shape if hasattr(audio_tensor, 'shape') else 'N/A'}")
+    print(f"Audio tensor shape before processing: {audio_tensor.shape if hasattr(audio_tensor, 'shape') else 'N/A'}")
+
+    # Ensure audio is 2D (channels, time) for saving
+    if isinstance(audio_tensor, torch.Tensor):
+        if audio_tensor.dim() == 1:
+            audio_tensor = audio_tensor.unsqueeze(0)
+            print(f"Reshaped audio tensor to 2D: {audio_tensor.shape}")
+    elif isinstance(audio_tensor, numpy.ndarray):
+        if audio_tensor.ndim == 1:
+            audio_tensor = audio_tensor[numpy.newaxis, :]
+            print(f"Reshaped audio numpy array to 2D: {audio_tensor.shape}")
+
+    print(f"Audio tensor shape after processing: {audio_tensor.shape if hasattr(audio_tensor, 'shape') else 'N/A'}")
+
     try:
         import soundfile as sf
-        temp_path = str(output_path) + '.tmp'
-        sf.write(temp_path, audio_tensor.numpy(), 24000)
-        os.replace(temp_path, str(output_path))
+        temp_path = output_path.parent / f"{output_path.stem}_temp.wav"
+        audio_np = audio_tensor.numpy() if isinstance(audio_tensor, torch.Tensor) else audio_tensor
+        sf.write(temp_path, audio_np, 24000)
+        os.replace(temp_path, output_path)
     except ImportError:
         print("soundfile not available, using torchaudio")
         torchaudio.save(str(output_path), audio_tensor, 24000)
