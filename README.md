@@ -24,13 +24,23 @@ cd OmniVoice-STUDIO
 pip install -r requirements.txt
 ```
 
-### 4. Cài Frontend
+### 3. Cài Frontend
 
 ```bash
 cd frontend
 npm install
 cd ..
 ```
+
+## Cài bằng opencode
+
+Mở terminal tại thư mục dự án và chạy:
+
+```bash
+opencode "cài đặt dependencies và chạy dự án này"
+```
+
+Opencode sẽ tự động cài Python packages, Node modules và chạy project cho bạn.
 
 ## Chạy
 
