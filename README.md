@@ -11,36 +11,33 @@ Công cụ tạo video tin tức AI với giọng nói tự nhiên sử dụng O
 
 ## Cài đặt
 
-### 1. Clone repo
+Trước hết, clone repo:
 
 ```bash
 git clone https://github.com/TranNguyenDung/OmniVoice-STUDIO.git
 cd OmniVoice-STUDIO
 ```
 
-### 2. Cài Python dependencies
+Sau đó chọn một trong hai cách dưới đây.
+
+### Cách 1: Cài thủ công
 
 ```bash
 pip install -r requirements.txt
-```
-
-### 3. Cài Frontend
-
-```bash
 cd frontend
 npm install
 cd ..
 ```
 
-## Cách 2: Cài bằng opencode (tự động)
+### Cách 2: Cài tự động bằng opencode
 
-Nếu đã cài [opencode](https://opencode.ai), mở terminal tại thư mục dự án và chạy:
+Nếu đã cài [opencode](https://opencode.ai), chạy:
 
 ```bash
 opencode "cài đặt dependencies và chạy dự án này"
 ```
 
-Opencode sẽ tự động cài Python packages, Node modules và chạy project cho bạn — không cần thao tác thủ công.
+Opencode sẽ tự động cài Python packages, Node modules và chạy project cho bạn.
 
 ## Chạy
 
