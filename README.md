@@ -32,15 +32,15 @@ npm install
 cd ..
 ```
 
-## Cài bằng opencode
+## Cách 2: Cài bằng opencode (tự động)
 
-Mở terminal tại thư mục dự án và chạy:
+Nếu đã cài [opencode](https://opencode.ai), mở terminal tại thư mục dự án và chạy:
 
 ```bash
 opencode "cài đặt dependencies và chạy dự án này"
 ```
 
-Opencode sẽ tự động cài Python packages, Node modules và chạy project cho bạn.
+Opencode sẽ tự động cài Python packages, Node modules và chạy project cho bạn — không cần thao tác thủ công.
 
 ## Chạy
 
