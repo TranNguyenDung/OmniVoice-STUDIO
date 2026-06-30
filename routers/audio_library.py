@@ -31,7 +31,7 @@ async def list_audios():
                 "metadata": metadata,
             })
 
-        files.sort(key=lambda x: x["mtime"], reverse=True)
+        files.sort(key=lambda x: (not x["metadata"].get("starred", False), -x["mtime"]))
         return files[:100]
     except Exception as e:
         print(f"Error listing audios: {e}")
@@ -51,6 +51,29 @@ async def delete_audio_item(filename: str):
         return {"success": True, "message": f"Deleted {filename}"}
     except Exception as e:
         print(f"Error deleting audio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/star")
+async def star_audio(filename: str):
+    try:
+        meta_file = LIBRARY_AUDIO_DIR / (Path(filename).stem + ".json")
+        if not meta_file.exists():
+            raise HTTPException(status_code=404, detail="Metadata not found")
+
+        with open(meta_file, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+
+        current = metadata.get("starred", False)
+        metadata["starred"] = not current
+
+        with open(meta_file, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "starred": metadata["starred"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error starring audio: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{filename:path}")

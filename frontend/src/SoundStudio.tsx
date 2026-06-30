@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Download, Mic, Settings, Music, RefreshCw, Volume2, Copy, X, Sparkles, FileJson, ArrowLeft, Trash2 } from 'lucide-react';
+import { Play, Download, Mic, Settings, Music, RefreshCw, Volume2, Copy, X, Sparkles, FileJson, ArrowLeft, Trash2, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface AudioItem {
@@ -13,6 +13,7 @@ interface AudioItem {
     speed?: number;
     duration?: number;
     created_at?: string;
+    starred?: boolean;
   };
 }
 
@@ -153,6 +154,20 @@ export default function SoundStudio() {
       }
     } catch (err) {
       console.error('Failed to delete audio', err);
+    }
+  };
+
+  const handleStarAudio = async (e: React.MouseEvent, audio: AudioItem) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/audio/star?filename=${encodeURIComponent(audio.name)}`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        fetchRecentAudios();
+      }
+    } catch (err) {
+      console.error('Failed to star audio', err);
     }
   };
 
@@ -374,6 +389,9 @@ export default function SoundStudio() {
               >
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-xl transition-all ${refAudio?.url === audio.url ? 'bg-orange-500 text-white shadow-orange-200 shadow-lg' : 'bg-orange-50 text-orange-300 group-hover:bg-orange-500 group-hover:text-white'}`}><Play size={16} fill="currentColor" /></div>
+                  <button onClick={(e) => handleStarAudio(e, audio)} className="p-1.5 hover:bg-yellow-100 rounded-lg transition-all shrink-0">
+                    <Star size={14} className={audio.metadata?.starred ? 'fill-yellow-400 text-yellow-400' : 'text-orange-300'} />
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-black truncate text-orange-900 group-hover:text-orange-600">{audio.name}</p>
