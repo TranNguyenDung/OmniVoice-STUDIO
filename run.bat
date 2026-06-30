@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
+set HF_HUB_DISABLE_SYMLINKS=1
 echo ============================================================
 echo OmniVoice Studio - Starting
 echo ============================================================

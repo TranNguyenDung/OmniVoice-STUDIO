@@ -411,10 +411,8 @@ def generate_tts(
 
     try:
         import soundfile as sf
-        temp_path = output_path.parent / f"{output_path.stem}_temp.wav"
         audio_np = audio_tensor.numpy() if isinstance(audio_tensor, torch.Tensor) else audio_tensor
-        sf.write(temp_path, audio_np, 24000)
-        os.replace(temp_path, output_path)
+        sf.write(str(output_path), audio_np, 24000)
     except ImportError:
         print("soundfile not available, using torchaudio")
         torchaudio.save(str(output_path), audio_tensor, 24000)
