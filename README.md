@@ -18,14 +18,7 @@ git clone https://github.com/TranNguyenDung/OmniVoice-STUDIO.git
 cd OmniVoice-STUDIO
 ```
 
-### 2. Tạo môi trường ảo (khuyến nghị)
-
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-### 3. Cài Python dependencies
+### 2. Cài Python dependencies
 
 ```bash
 pip install -r requirements.txt
